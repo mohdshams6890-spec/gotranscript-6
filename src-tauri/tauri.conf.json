@@ -29,15 +29,11 @@
     "active": true,
     "icon": [],
     "targets": ["msi", "dmg"],
-    "createUpdaterArtifacts": true,
+    "createUpdaterArtifacts": false,
     "windows": { "wix": { "language": ["en-US"] } },
     "macOS": { "minimumSystemVersion": "11.0" }
   },
   "plugins": {
-    "opener": { "open": true },
-    "updater": {
-      "pubkey": "REPLACE_WITH_TAURI_UPDATER_PUBLIC_KEY",
-      "endpoints": ["https://github.com/OWNER/REPO/releases/latest/download/latest.json"]
-    }
+    "opener": { "open": true }
   }
 }
