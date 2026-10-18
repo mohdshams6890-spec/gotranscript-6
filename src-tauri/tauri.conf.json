@@ -27,6 +27,7 @@
   },
   "bundle": {
     "active": true,
+    "icon": [],
     "targets": ["msi", "dmg"],
     "createUpdaterArtifacts": true,
     "windows": { "wix": { "language": ["en-US"] } },
