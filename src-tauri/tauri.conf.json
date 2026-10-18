@@ -1,0 +1,42 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "GoTranscript",
+  "version": "1.0.0",
+  "identifier": "com.gotranscript.desktop",
+  "build": {
+    "beforeDevCommand": "pnpm dev --host 127.0.0.1 --port 5173",
+    "devUrl": "http://localhost:5173",
+    "beforeBuildCommand": "pnpm build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "GoTranscript",
+        "width": 1280,
+        "height": 820,
+        "minWidth": 900,
+        "minHeight": 650,
+        "resizable": true
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self' ipc: http://ipc.localhost; connect-src 'self' ipc: http://ipc.localhost https://*.supabase.co https://*.vercel.app https://your-vercel-domain.com; img-src 'self' data: https:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:;"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["msi", "dmg"],
+    "createUpdaterArtifacts": true,
+    "windows": { "wix": { "language": ["en-US"] } },
+    "macOS": { "minimumSystemVersion": "11.0" }
+  },
+  "plugins": {
+    "opener": { "open": true },
+    "updater": {
+      "pubkey": "REPLACE_WITH_TAURI_UPDATER_PUBLIC_KEY",
+      "endpoints": ["https://github.com/OWNER/REPO/releases/latest/download/latest.json"]
+    }
+  }
+}
