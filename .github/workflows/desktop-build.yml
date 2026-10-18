@@ -3,57 +3,58 @@ name: Build desktop installers
 on:
   workflow_dispatch:
   push:
-    branches: [main]
+    branches:
+      - main
 
 jobs:
-  build:
-    name: Build ${{ matrix.name }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - name: Windows
-            os: windows-latest
-            args: ''
-            artifact: windows-installer
-            path: src-tauri/target/release/bundle/msi/*.msi
-          - name: macOS Apple Silicon
-            os: macos-latest
-            args: '--target aarch64-apple-darwin'
-            artifact: macos-apple-silicon
-            path: src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/*.dmg
-          - name: macOS Intel
-            os: macos-latest
-            args: '--target x86_64-apple-darwin'
-            artifact: macos-intel
-            path: src-tauri/target/x86_64-apple-darwin/release/bundle/dmg/*.dmg
-    runs-on: ${{ matrix.os }}
+  windows:
+    name: Windows installer
+    runs-on: windows-latest
     steps:
-      - name: Checkout project
+      - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Install pnpm
+      - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
           version: 9
-
-      - name: Install Node.js
+      - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: pnpm
-
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Build Tauri app
+        run: pnpm install --no-frozen-lockfile
+      - name: Build Windows installer
         uses: tauri-apps/tauri-action@v0
-        with:
-          args: ${{ matrix.args }}
-
-      - name: Upload installer
+      - name: Upload Windows installer
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.artifact }}
-          path: ${{ matrix.path }}
+          name: gotranscript-windows
+          path: src-tauri/target/release/bundle/msi/*.msi
 
+  macos:
+    name: macOS Apple Silicon installer
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --no-frozen-lockfile
+      - name: Build macOS installer
+        uses: tauri-apps/tauri-action@v0
+        with:
+          args: --target aarch64-apple-darwin
+      - name: Upload macOS installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: gotranscript-macos
+          path: src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/*.dmg
