@@ -3,5 +3,5 @@
   "identifier": "default",
   "description": "Default permissions for the GoTranscript desktop window",
   "windows": ["main"],
-  "permissions": ["core:default", "opener:default", "updater:default"]
+  "permissions": ["core:default", "opener:default"]
 }
