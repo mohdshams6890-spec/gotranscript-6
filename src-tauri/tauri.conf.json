@@ -39,7 +39,5 @@
     "windows": { "wix": { "language": ["en-US"] } },
     "macOS": { "minimumSystemVersion": "11.0" }
   },
-  "plugins": {
-    "opener": { "open": true }
-  }
+  "plugins": {}
 }
