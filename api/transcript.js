@@ -21,7 +21,7 @@ export default async function handler(req, res) {
     return res.status(200).json({
       title: item.title || 'YouTube transcript',
       transcript: item.transcript || item.text || '',
-      segments: item.segments || [],
+      segments: item.segments || item.transcriptSegments || item.items || null,
       wordCount: item.wordCount || (item.transcript || item.text || '').trim().split(/\s+/).filter(Boolean).length,
       sourceUrl: item.url || url,
       timestamp: item.timestamp || new Date().toISOString()

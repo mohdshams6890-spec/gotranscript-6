@@ -15,6 +15,24 @@ const demoHistory = [
 ];
 const DAILY_CREDITS = 5;
 
+function decodeTranscriptText(value = '') {
+  const textarea = document.createElement('textarea');
+  textarea.innerHTML = String(value);
+  return textarea.value.replace(/\s+/g, ' ').trim();
+}
+
+function transcriptRows(data) {
+  const segments = Array.isArray(data?.segments) ? data.segments : [];
+  if (segments.length) return segments.map((segment, index) => ({
+    time: segment.timestamp || segment.startTime || segment.start || segment.time || `#${index + 1}`,
+    text: decodeTranscriptText(segment.text || segment.transcript || segment.caption || segment.content || '')
+  })).filter(row => row.text);
+  return decodeTranscriptText(data?.transcript || '').split(/\n+/).map((line, index) => {
+    const match = line.match(/^\s*(\[?\d{1,2}:\d{2}(?::\d{2})?\]?)\s*[-–—:]?\s*(.+)$/);
+    return match ? { time: match[1].replace(/[\[\]]/g, ''), text: decodeTranscriptText(match[2]) } : { time: `#${index + 1}`, text: decodeTranscriptText(line) };
+  }).filter(row => row.text);
+}
+
 function App() {
   const [user, setUser] = useState(null), [authOpen, setAuthOpen] = useState(false), [authMode, setAuthMode] = useState('signup');
   const [email, setEmail] = useState(''), [password, setPassword] = useState(''), [url, setUrl] = useState('');
@@ -77,14 +95,14 @@ function App() {
       const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
       const response = await fetch(`${apiBaseUrl}/api/transcript`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url: normalized }) });
       if (!response.ok) throw new Error((await response.json()).error || 'Could not fetch transcript.');
-      const data = await response.json(); setTranscript(data); setCreditsLeft(current => Math.max(0, current - 1));
+      const data = await response.json(); data.transcript = decodeTranscriptText(data.transcript); data.rows = transcriptRows(data); setTranscript(data); setCreditsLeft(current => Math.max(0, current - 1));
       setHistory(current => [{ id: Date.now(), title: data.title, meta: 'Just now · transcript', words: data.wordCount.toLocaleString() }, ...current]);
       if (supabase && user) await supabase.from('transcripts').insert({ user_id: user.id, title: data.title, source_url: data.sourceUrl, transcript: data.transcript, word_count: data.wordCount });
     } catch (error) {
       setNotice('We could not generate this transcript. Please check the link and try again.');
     } finally { setLoading(false); setTimeout(() => outputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 80); }
   }
-  const copy = async () => { if (!transcript) return; await navigator.clipboard?.writeText(transcript.transcript); setCopied(true); setTimeout(() => setCopied(false), 1800); };
+  const copy = async () => { if (!transcript) return; const text = (transcript.rows || []).map(row => `${row.time}  ${row.text}`).join('\n'); await navigator.clipboard?.writeText(text || transcript.transcript); setCopied(true); setTimeout(() => setCopied(false), 1800); };
   const openAuth = mode => { setAuthMode(mode); setNotice(''); setAuthOpen(true); };
   const goTo = id => { setMobileMenuOpen(false); document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' }); };
 
@@ -95,7 +113,7 @@ function App() {
       <div className="dashboard-intro"><div><div className="eyebrow intro-kicker"><span>✦</span> AI POWERED YOUTUBE TRANSCRIPTS</div><h1>Paste any YouTube<br />link. Get a clean<br /><em>transcript in seconds.</em></h1><p className="intro-copy">Built for creators, researchers, and editors who want the transcript first, not<br className="desktop-break" /> another dashboard maze.</p></div></div>
       <section className="generator-stack" id="generator">
         <article className="panel input-panel"><PanelHeading icon={<Link2 size={15} />} title="Paste a video to begin" badge={!user ? 'Login required' : `${creditsLeft} credits available`} badgeType={!user ? 'orange' : 'green'} /><p className="panel-hint">YouTube URL, Shorts link, share link, or video ID</p><div className="url-field"><input aria-label="YouTube URL or ID" value={url} onChange={e => setUrl(e.target.value)} onPaste={e => setUrl(e.clipboardData.getData('text'))} onKeyDown={e => e.key === 'Enter' && generate()} placeholder="Paste your YouTube link here…" />{url && <button className="field-clear" onClick={() => setUrl('')}><X size={14} /></button>}<button className="primary-action" onClick={generate} disabled={!url || loading || !isOnline}>{loading ? <Loader2 className="spin" size={15} /> : <Play size={14} fill="currentColor" />} {loading ? 'Extracting…' : isOnline ? 'Generate transcript' : 'Offline'}</button></div></article>
-        <article className={`panel output-panel ${loading ? 'is-extracting' : ''}`} ref={outputRef}><PanelHeading icon={<Sparkles size={15} />} title="Output" badge={transcript ? 'Ready' : loading ? 'Working' : null} badgeType="green" />{loading ? <div className="extracting-state"><Loader2 className="spin extracting-icon" size={28} /><h3>Extracting transcript…</h3><p>Cleaning the YouTube link and preparing your copy-<br className="desktop-break" />ready text.</p><div className="extracting-bars"><span /><span /><span /></div></div> : transcript ? <div className="output-ready"><div className="output-meta"><div><span className="eyebrow">TRANSCRIPT READY</span><h2>{transcript.title}</h2><span className="muted-mono">{transcript.wordCount.toLocaleString()} words · English</span></div><button className="copy-button" onClick={copy}>{copied ? <Check size={14} /> : <Copy size={14} />} {copied ? 'Copied' : 'Copy'}</button></div><div className="transcript-scroll">{transcript.transcript}</div></div> : <div className="empty-output"><LockKeyhole size={21} /><h3>Your transcript will land here.</h3><p>Paste a link above and your generated text will appear here, ready to copy.</p></div>}</article>
+      <article className={`panel output-panel ${loading ? 'is-extracting' : ''}`} ref={outputRef}><PanelHeading icon={<Sparkles size={15} />} title="Output" badge={transcript ? 'Ready' : loading ? 'Working' : null} badgeType="green" />{loading ? <div className="extracting-state"><Loader2 className="spin extracting-icon" size={28} /><h3>Extracting transcript…</h3><p>Cleaning the YouTube link and preparing your copy-<br className="desktop-break" />ready text.</p><div className="extracting-bars"><span /><span /><span /></div></div> : transcript ? <div className="output-ready"><div className="output-meta"><div><span className="eyebrow">TRANSCRIPT READY</span><h2>{transcript.title}</h2><span className="muted-mono">{transcript.wordCount.toLocaleString()} words · English</span></div><button className="copy-button" onClick={copy}>{copied ? <Check size={14} /> : <Copy size={14} />} {copied ? 'Copied' : 'Copy'}</button></div><div className="transcript-scroll transcript-rows">{transcript.rows.map((row, index) => <div className="transcript-row" key={`${row.time}-${index}`}><time>{row.time}</time><p>{row.text}</p></div>)}</div></div> : <div className="empty-output"><LockKeyhole size={21} /><h3>Your transcript will land here.</h3><p>Paste a link above and your generated text will appear here, ready to copy.</p></div>}</article>
       </section>
       <section className="bottom-grid"><article className="panel history-panel" id="history"><PanelHeading icon={<History size={15} />} title="History" badge={`${history.length} saved`} badgeType="green" /><div className="history-toolbar"><span>Recent transcripts</span><div className="history-search"><Search size={13} /><input value={historyQuery} onChange={e => setHistoryQuery(e.target.value)} placeholder="Search" /></div></div><div className="history-items">{filteredHistory.length ? filteredHistory.map(item => <button className="history-item" key={item.id} onClick={() => setUrl('')}><div className="history-file"><FileText size={15} /></div><div><strong>{item.title}</strong><span>{item.meta}</span></div><span className="history-word-count">{item.words} words <ArrowUpRight size={13} /></span></button>) : <p className="empty-history">No transcript history yet.</p>}</div></article><article className="panel account-panel" id="account"><PanelHeading icon={<Settings2 size={15} />} title="Account settings" badge={user ? 'Active' : 'Guest'} badgeType={user ? 'green' : 'orange'} /><div className="account-stats"><div><span>Credits today</span><strong>{user ? creditsLeft : '0'}</strong><small>{user ? 'resets at midnight' : 'Login to unlock'}</small></div><div><span>Billing</span><strong className={!user ? 'locked' : ''}>{user ? 'Free plan' : 'Locked'}</strong><small>{user ? `${DAILY_CREDITS} daily credits` : 'Login to view'}</small></div><div><span>Offer</span><strong>7 days</strong><small>Unlimited transcripts</small></div></div><div className="account-actions">{user ? <><button className="secondary-action">Manage billing <ArrowUpRight size={13} /></button><button className="offer-action">Unlock 7-day offer <ArrowUpRight size={13} /></button></> : <button className="primary-action" onClick={() => openAuth('signup')}><LogIn size={14} /> Login or sign up</button>}</div></article></section>
       {!isOnline && <div className="notice">You’re offline. Reconnect to use authentication, generation, and cloud history.</div>}
